@@ -1,0 +1,2135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>掬月诗集 - 电子诗刊</title>
+    <!-- 不依赖外部CDN，使用系统字体 -->
+    <style>
+        :root {
+            --primary: #8B4513;
+            --primary-light: #A0522D;
+            --seal-red: #b93a32;
+            --bg-warm: #d4c5a9;
+            --bg-dark: #2c241b;
+            --paper: #f7f1e3;
+            --paper-dark: #ebe4d3;
+            --ink: #2c241b;
+            --ink-light: #5d554a;
+            --gold: #c9a227;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Songti SC", "STSong", "SimSun", "华文宋体", "宋体", serif;
+            background: linear-gradient(135deg, var(--bg-warm) 0%, #c4b494 50%, var(--bg-warm) 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to bottom, rgba(212, 197, 169, 0.95), transparent);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--ink);
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .logo:hover {
+            color: var(--seal-red);
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            border: 2px solid currentColor;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.5);
+            border: 1px solid rgba(0,0,0,0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.875rem;
+            color: var(--ink);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-btn:hover {
+            background: var(--seal-red);
+            color: white;
+            border-color: var(--seal-red);
+        }
+
+        /* ===== 主容器 ===== */
+        .main-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5rem 1rem 2rem;
+            perspective: 2000px;
+        }
+
+        /* ===== 书本容器 ===== */
+        .book-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            height: 80vh;
+            max-height: 700px;
+        }
+
+        .book {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* ===== 书脊 ===== */
+        .book-spine {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 30px;
+            transform: translateX(-50%);
+            background: linear-gradient(90deg, 
+                rgba(44, 36, 27, 0.15) 0%, 
+                rgba(44, 36, 27, 0.05) 30%,
+                rgba(255, 255, 255, 0.05) 50%,
+                rgba(44, 36, 27, 0.05) 70%,
+                rgba(44, 36, 27, 0.15) 100%
+            );
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        /* ===== 页面容器 ===== */
+        .pages-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            transform-style: preserve-3d;
+        }
+
+        /* ===== 单个翻页 ===== */
+        .page-spread {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s;
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .page-spread.active {
+            pointer-events: auto;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .page-spread.flipped {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        /* ===== 左右页面 ===== */
+        .page {
+            width: 50%;
+            height: 100%;
+            background: var(--paper);
+            position: relative;
+            overflow: hidden;
+            transform-style: preserve-3d;
+            backface-visibility: hidden;
+        }
+
+        .page-left {
+            border-radius: 4px 0 0 4px;
+            box-shadow: 
+                inset -20px 0 40px -10px rgba(44, 36, 27, 0.08),
+                -5px 0 15px rgba(0,0,0,0.1);
+            border-right: 1px solid rgba(44, 36, 27, 0.1);
+        }
+
+        .page-right {
+            border-radius: 0 4px 4px 0;
+            box-shadow: 
+                inset 20px 0 40px -10px rgba(44, 36, 27, 0.08),
+                5px 0 15px rgba(0,0,0,0.1);
+            border-left: 1px solid rgba(44, 36, 27, 0.1);
+        }
+
+        /* 纸张纹理 */
+        .page::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)'/%3E%3C/svg%3E");
+            opacity: 0.03;
+            pointer-events: none;
+        }
+
+        /* ===== 封面样式 ===== */
+        .cover-page {
+            background: linear-gradient(135deg, #c4a574 0%, #a08060 50%, #c4a574 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            position: relative;
+        }
+
+        .cover-page::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)'/%3E%3C/svg%3E");
+            opacity: 0.08;
+            pointer-events: none;
+        }
+
+        .cover-decoration {
+            position: absolute;
+            bottom: 10%;
+            left: 5%;
+            right: 5%;
+            height: 40%;
+            opacity: 0.15;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: bottom center;
+            filter: grayscale(100%) sepia(20%);
+        }
+
+        .cover-title-vertical {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        .cover-main-title {
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            font-weight: 900;
+            color: var(--ink);
+            letter-spacing: 0.4em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .cover-subtitle {
+            font-size: clamp(0.875rem, 2vw, 1.125rem);
+            color: var(--ink-light);
+            letter-spacing: 0.15em;
+            padding-top: 1.5rem;
+            border-top: 2px solid var(--seal-red);
+        }
+
+        .cover-seal {
+            position: absolute;
+            bottom: 2rem;
+            left: 2rem;
+            width: 60px;
+            height: 60px;
+            border: 3px solid var(--seal-red);
+            border-radius: 4px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            padding: 4px;
+            background: rgba(185, 58, 50, 0.05);
+            transform: rotate(3deg);
+            z-index: 1;
+        }
+
+        .cover-seal span {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--seal-red);
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        /* ===== 目录页样式 ===== */
+        .toc-page {
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .toc-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--seal-red);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .toc-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toc-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+
+        .toc-item:hover {
+            background: rgba(185, 58, 50, 0.05);
+            border-color: rgba(185, 58, 50, 0.2);
+        }
+
+        .toc-number {
+            width: 2rem;
+            font-size: 0.875rem;
+            color: var(--seal-red);
+            font-weight: 600;
+        }
+
+        .toc-poem-title {
+            flex: 1;
+            font-size: 1rem;
+            color: var(--ink);
+        }
+
+        .toc-author {
+            font-size: 0.875rem;
+            color: var(--ink-light);
+        }
+
+        /* ===== 诗词页面样式 ===== */
+        .poem-page {
+            padding: 1.5rem 2rem;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .poem-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(44, 36, 27, 0.1);
+        }
+
+        .poem-author-tag {
+            font-size: 0.875rem;
+            color: var(--ink-light);
+            font-weight: 500;
+            letter-spacing: 0.1em;
+        }
+
+        .poem-content-area {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            padding: 1rem 0;
+        }
+
+        .poem-vertical-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 0.75rem;
+            height: 100%;
+            text-align: center;
+        }
+
+        .poem-title-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(185, 58, 50, 0.3);
+        }
+
+        .poem-title {
+            font-size: clamp(1.75rem, 4vw, 2.5rem);
+            font-weight: 900;
+            color: var(--ink);
+            letter-spacing: 0.25em;
+        }
+
+        .poem-author-block {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .poem-author {
+            font-size: 1.125rem;
+            color: var(--seal-red);
+            font-weight: 600;
+            letter-spacing: 0.2em;
+        }
+
+        .poem-time {
+            font-size: 0.8125rem;
+            color: var(--ink-light);
+            font-weight: 400;
+            letter-spacing: 0.05em;
+            opacity: 0.7;
+        }
+
+        .poet-seal {
+            width: 28px;
+            height: 28px;
+            border: 2px solid var(--seal-red);
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.625rem;
+            color: var(--seal-red);
+            font-weight: 700;
+            background: rgba(185, 58, 50, 0.05);
+        }
+
+        .poem-lines {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .poem-line {
+            font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+            color: var(--ink-light);
+            letter-spacing: 0.15em;
+            line-height: 1.6;
+            transition: color 0.3s;
+            cursor: default;
+        }
+
+        .poem-line:hover {
+            color: var(--ink);
+        }
+
+        .page-number {
+            position: absolute;
+            bottom: 1.5rem;
+            font-size: 0.875rem;
+            color: var(--ink-light);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .page-number-left {
+            left: 2rem;
+        }
+
+        .page-number-right {
+            right: 2rem;
+        }
+
+        .page-number::before,
+        .page-number::after {
+            content: '';
+            width: 1.5rem;
+            height: 1px;
+            background: rgba(44, 36, 27, 0.2);
+        }
+
+        /* ===== 注释页面样式 ===== */
+        .annotation-page {
+            padding: 2.5rem;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, var(--paper) 0%, var(--paper-dark) 100%);
+            position: relative;
+        }
+
+        .annotation-bg-image {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.15;
+            filter: grayscale(100%) sepia(20%);
+        }
+
+        .annotation-content {
+            position: relative;
+            z-index: 1;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .annotation-header {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 1.5rem;
+        }
+
+        .annotation-meta {
+            text-align: right;
+        }
+
+        .annotation-author-tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: rgba(255,255,255,0.8);
+            border: 1px solid rgba(44, 36, 27, 0.1);
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--ink-light);
+            letter-spacing: 0.05em;
+            border-radius: 2px;
+        }
+
+        .annotation-card {
+            background: rgba(252, 250, 247, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(214, 207, 194, 0.8);
+            border-radius: 8px;
+            padding: 1.5rem;
+            padding-bottom: 5rem;
+            margin-top: auto;
+            box-shadow: 0 10px 30px rgba(44, 36, 27, 0.1);
+            max-height: 45vh;
+            overflow-y: auto;
+        }
+
+        .annotation-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .annotation-card-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--ink);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .annotation-card-title .icon {
+            color: var(--seal-red);
+            font-size: 1.25rem;
+        }
+
+        .annotation-card-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .annotation-card-actions button {
+            background: none;
+            border: none;
+            padding: 0.375rem;
+            cursor: pointer;
+            color: var(--ink-light);
+            transition: color 0.3s;
+            border-radius: 4px;
+        }
+
+        .annotation-card-actions button:hover {
+            color: var(--ink);
+            background: rgba(0,0,0,0.05);
+        }
+
+        .explore-icon-btn {
+            color: var(--seal-red) !important;
+        }
+
+        .explore-icon-btn:hover {
+            background: rgba(185, 58, 50, 0.1) !important;
+        }
+
+        .annotation-text {
+            font-size: 0.9375rem;
+            line-height: 1.8;
+            color: var(--ink-light);
+            border-left: 3px solid rgba(185, 58, 50, 0.3);
+            padding-left: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .annotation-section {
+            margin-bottom: 1rem;
+        }
+
+        .annotation-section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--seal-red);
+            letter-spacing: 0.1em;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .annotation-section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(185, 58, 50, 0.2);
+        }
+
+        .annotation-notes {
+            font-size: 0.875rem;
+            line-height: 1.7;
+            color: var(--ink-light);
+        }
+
+        .annotation-note-item {
+            margin-bottom: 0.5rem;
+            padding-left: 1rem;
+            position: relative;
+        }
+
+        .annotation-note-item::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--seal-red);
+        }
+
+        .annotation-note-more {
+            color: var(--seal-red);
+            font-size: 0.8125rem;
+            font-style: italic;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px dashed rgba(139, 69, 19, 0.2);
+        }
+
+        .annotation-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .annotation-footer-link {
+            font-size: 0.75rem;
+            color: var(--ink-light);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .annotation-footer-link:hover {
+            color: var(--ink);
+        }
+
+        .annotation-explore-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--seal-red);
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: gap 0.3s;
+        }
+
+        .annotation-explore-btn:hover {
+            gap: 0.75rem;
+        }
+
+        /* ===== 翻页按钮 ===== */
+        .page-navigation {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(10px);
+            padding: 0.75rem 1.5rem;
+            border-radius: 3rem;
+            box-shadow: 0 10px 40px rgba(44, 36, 27, 0.15);
+            border: 1px solid rgba(214, 207, 194, 0.5);
+            z-index: 100;
+        }
+
+        .page-nav-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--paper);
+            border: 1px solid rgba(214, 207, 194, 0.8);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--ink);
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .page-nav-btn:hover:not(:disabled) {
+            background: var(--seal-red);
+            color: white;
+            border-color: var(--seal-red);
+            transform: scale(1.05);
+        }
+
+        .page-nav-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .page-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .page-indicator-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--ink);
+            letter-spacing: 0.05em;
+            max-width: 200px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .page-dots {
+            display: flex;
+            gap: 0.375rem;
+        }
+
+        .page-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(44, 36, 27, 0.15);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .page-dot.active {
+            background: var(--seal-red);
+            transform: scale(1.2);
+        }
+
+        .page-dot:hover:not(.active) {
+            background: rgba(44, 36, 27, 0.3);
+        }
+
+        /* ===== 目录抽屉 ===== */
+        .toc-drawer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 360px;
+            max-width: 90vw;
+            background: var(--paper);
+            box-shadow: 5px 0 30px rgba(0,0,0,0.2);
+            transform: translateX(-100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .toc-drawer.open {
+            transform: translateX(0);
+        }
+
+        .toc-drawer-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(44, 36, 27, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toc-drawer-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--ink);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toc-drawer-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            color: var(--ink-light);
+            transition: color 0.3s;
+            border-radius: 4px;
+        }
+
+        .toc-drawer-close:hover {
+            color: var(--ink);
+            background: rgba(0,0,0,0.05);
+        }
+
+        .toc-drawer-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .toc-drawer-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 0.5rem;
+            border: 1px solid transparent;
+        }
+
+        .toc-drawer-item:hover {
+            background: rgba(185, 58, 50, 0.05);
+            border-color: rgba(185, 58, 50, 0.2);
+        }
+
+        .toc-drawer-item.active {
+            background: rgba(185, 58, 50, 0.1);
+            border-color: var(--seal-red);
+        }
+
+        .toc-drawer-number {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background: rgba(185, 58, 50, 0.1);
+            color: var(--seal-red);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 1rem;
+        }
+
+        .toc-drawer-info {
+            flex: 1;
+        }
+
+        .toc-drawer-poem-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--ink);
+            margin-bottom: 0.25rem;
+        }
+
+        .toc-drawer-author {
+            font-size: 0.8125rem;
+            color: var(--ink-light);
+        }
+
+        .toc-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            z-index: 150;
+        }
+
+        .toc-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* ===== 注释面板模态框 ===== */
+        .annotation-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(44, 36, 27, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 300;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .annotation-modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .annotation-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 90%;
+            max-width: 600px;
+            max-height: 85vh;
+            background: var(--paper);
+            border-radius: 12px;
+            box-shadow: 0 25px 80px rgba(44, 36, 27, 0.3);
+            z-index: 301;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .annotation-modal.open {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .annotation-modal-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid rgba(44, 36, 27, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to bottom, var(--paper), var(--paper-dark));
+        }
+
+        .annotation-modal-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .annotation-modal-title .icon {
+            color: var(--seal-red);
+        }
+
+        .annotation-modal-close {
+            background: none;
+            border: none;
+            padding: 0.5rem;
+            cursor: pointer;
+            color: var(--ink-light);
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .annotation-modal-close:hover {
+            background: rgba(0,0,0,0.05);
+            color: var(--ink);
+        }
+
+        .annotation-modal-body {
+            padding: 2rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .annotation-modal-poem-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(44, 36, 27, 0.1);
+        }
+
+        .annotation-modal-poem-title {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--ink);
+            letter-spacing: 0.1em;
+        }
+
+        .annotation-modal-poem-author {
+            font-size: 1rem;
+            color: var(--seal-red);
+            font-weight: 500;
+        }
+
+        .annotation-modal-poem-time {
+            font-size: 0.875rem;
+            color: var(--ink-light);
+            opacity: 0.7;
+        }
+
+        .annotation-modal-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .annotation-modal-section-title {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--seal-red);
+            letter-spacing: 0.1em;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .annotation-modal-section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(185, 58, 50, 0.2);
+        }
+
+        .annotation-modal-text {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: var(--ink-light);
+        }
+
+        .annotation-modal-notes {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .annotation-modal-note-item {
+            padding: 0.75rem 1rem;
+            background: rgba(44, 36, 27, 0.03);
+            border-radius: 6px;
+            border-left: 3px solid var(--seal-red);
+            font-size: 0.9375rem;
+            color: var(--ink-light);
+            line-height: 1.6;
+        }
+
+        .annotation-modal-note-item strong {
+            color: var(--ink);
+            font-weight: 600;
+        }
+
+        /* ===== 响应式设计 ===== */
+        @media (max-width: 900px) {
+            .book-wrapper {
+                height: auto;
+                max-height: none;
+                margin-bottom: 5rem;
+            }
+            
+            .page-spread {
+                flex-direction: column;
+            }
+            
+            .page {
+                width: 100%;
+                min-height: 50vh;
+            }
+            
+            .annotation-page {
+                padding-bottom: 6rem;
+            }
+            
+            .annotation-card {
+                max-height: 35vh;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 1rem;
+            }
+            
+            .page-left {
+                border-radius: 4px 4px 0 0;
+                box-shadow: none;
+                border-right: none;
+                border-bottom: 1px solid rgba(44, 36, 27, 0.1);
+            }
+            
+            .page-right {
+                border-radius: 0 0 4px 4px;
+                box-shadow: none;
+                border-left: none;
+            }
+            
+            .book-spine {
+                display: none;
+            }
+            
+            .poem-vertical-content {
+                max-height: 250px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .header {
+                padding: 0.75rem 1rem;
+            }
+            
+            .logo-text {
+                font-size: 1rem;
+            }
+            
+            .page-navigation {
+                padding: 0.5rem 1rem;
+                gap: 1rem;
+            }
+            
+            .page-nav-btn {
+                width: 40px;
+                height: 40px;
+            }
+            
+            .page-indicator-title {
+                font-size: 0.75rem;
+                max-width: 120px;
+            }
+            
+            .poem-page, .annotation-page {
+                padding: 1.5rem;
+            }
+            
+            .annotation-page {
+                padding-bottom: 6rem;
+            }
+            
+            .annotation-card {
+                max-height: none;
+                padding-bottom: 1.5rem;
+            }
+        }
+
+        /* ===== 翻页动画 ===== */
+        @keyframes pageFlipRight {
+            0% { transform: rotateY(0deg); }
+            100% { transform: rotateY(-180deg); }
+        }
+
+        @keyframes pageFlipLeft {
+            0% { transform: rotateY(-180deg); }
+            100% { transform: rotateY(0deg); }
+        }
+
+        .flipping-right {
+            animation: pageFlipRight 0.8s ease-in-out forwards;
+            transform-origin: left center;
+        }
+
+        .flipping-left {
+            animation: pageFlipLeft 0.8s ease-in-out forwards;
+            transform-origin: left center;
+        }
+
+        /* 隐藏滚动条 */
+        .toc-drawer-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .toc-drawer-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .toc-drawer-list::-webkit-scrollbar-thumb {
+            background: rgba(44, 36, 27, 0.2);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <header class="header">
+        <div class="logo" onclick="goToPage(0)">
+            <div class="logo-icon">
+                <span class="icon">📖</span>
+            </div>
+            <span class="logo-text">掬月诗集</span>
+        </div>
+        <div class="nav-controls">
+            <button class="nav-btn" onclick="toggleToc()">
+                <span class="icon">☰</span>
+                <span>目录</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- 主容器 -->
+    <main class="main-container">
+        <div class="book-wrapper">
+            <div class="book">
+                <div class="book-spine"></div>
+                <div class="pages-container" id="pagesContainer">
+                    <!-- 页面将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 翻页导航 -->
+    <nav class="page-navigation">
+        <button class="page-nav-btn" id="prevBtn" onclick="prevPage()">
+            <span class="icon">◀</span>
+        </button>
+        <div class="page-indicator">
+            <span class="page-indicator-title" id="pageTitle">掬月诗集</span>
+            <div class="page-dots" id="pageDots">
+                <!-- 分页点将动态生成 -->
+            </div>
+        </div>
+        <button class="page-nav-btn" id="nextBtn" onclick="nextPage()">
+            <span class="icon">▶</span>
+        </button>
+    </nav>
+
+    <!-- 注释面板模态框 -->
+    <div class="annotation-modal-overlay" id="annotationOverlay" onclick="closeAnnotationModal()"></div>
+    <div class="annotation-modal" id="annotationModal">
+        <div class="annotation-modal-header">
+            <h2 class="annotation-modal-title">
+                <span id="modalPoemTitle">诗词详解</span>
+            </h2>
+            <button class="annotation-modal-close" onclick="closeAnnotationModal()">
+                <span class="icon">✕</span>
+            </button>
+        </div>
+        <div class="annotation-modal-body" id="annotationModalBody">
+            <!-- 内容将动态填充 -->
+        </div>
+    </div>
+
+    <!-- 目录抽屉 -->
+    <div class="toc-overlay" id="tocOverlay" onclick="toggleToc()"></div>
+    <aside class="toc-drawer" id="tocDrawer">
+        <div class="toc-drawer-header">
+            <h2 class="toc-drawer-title">
+                <span class="icon">☰</span>
+                目录
+            </h2>
+            <button class="toc-drawer-close" onclick="toggleToc()">
+                <span class="icon">✕</span>
+            </button>
+        </div>
+        <div class="toc-drawer-list" id="tocList">
+            <!-- 目录列表将动态生成 -->
+        </div>
+    </aside>
+
+    <script>
+        // ==========================================
+        // 📚 诗词数据 - 在这里添加/修改/删除诗词
+        // ==========================================
+        // 数据格式说明：
+        // id: 编号（递增）
+        // title: 诗词标题
+        // author: 作者姓名
+        // createTime: 创作时间（可选）
+        // content: 诗词内容（数组，每句/每段一个元素）
+        // interpretation: 作者心语
+        // notes: 词句注释（数组）
+        // bgImage: 背景图片URL（可选）
+        
+        const poems = [
+            {
+                id: 1,
+                title: "兰陵王·出塞",
+                author: "阵午车",
+                createTime: "2024年8月",
+                content: [
+                    "旧时月。照柳曾堪揽结。千丝怨、尘暗琐窗，别后明妃鬓应雪。朱扉冷似铁。虚设、银屏绛阙。莺来晚、不见故人，惟剩垂条弱如发。",
+                    "凉飙换时节。正瀚海烟冲，孤雁轻别。霜风凄紧欺弦噎。随渐响环佩，待归魂魄，琵琶停语怨顿歇。暮云压城堞。",
+                    "情切。共谁说？又驿马长嘶，金柝凉咽。边声耿耿侵人竭。怅塞夜迢递，漏壶滴缺。冥迷青冢，有烛泣、泪未绝。"
+                ],
+                interpretation: "创作背景是送人出塞。以周邦彦《兰陵王·柳》调为正体，领格字皆用去声，惟「随」字平声。以昭君出塞为情感核心，致力于通过时空交错的意象群构建出苍凉悲壮的边塞画卷。全词以「旧时月」起兴，瞬间打通历史纵深——千年明月曾照汉宫折柳，今又映照塞外孤冢，形成循环往复的时空漩涡。运用多重感官维度：视觉上「尘暗琐窗」「暮云压城堞」的晦暗色调，听觉中「弦噎」「金柝咽」的断续悲音，触觉里「朱扉冷似铁」「霜风凄紧」的刺骨寒意，共同织就了跨越时空的苦难感知网络。",
+                notes: [
+                    "揽结：指折下柳枝用来编结。折柳是一种起源于汉代的送别习俗，折柳枝送别，以表达依依不舍之情。",
+                    "琐窗：雕刻或绘有连环形花纹装饰构件的窗户。",
+                    "明妃：指王昭君，晋代避司马昭（文帝）讳，改称明君，后人称之为明妃。",
+                    "银屏绛阙：华美的屏风和朱红的宫门。银屏，古代家居陈设中镶嵌银质装饰的屏风。绛阙，指宫殿寺观前的朱色门阙。",
+                    "凉飙：秋风，最早见于汉代班婕妤《怨歌行》「常恐秋节至，凉飙夺炎热」。",
+                    "瀚海：原指北方大型湖泊，后演变为戈壁沙漠的代称。这里指沙漠。",
+                    "霜风凄紧欺弦噎：寒风凄厉，迫使琵琶弦声阻塞如同呜咽。化用柳永《八声甘州》「渐霜风凄紧，关河冷落，残照当楼」。霜风，指代秋冬时节凛冽刺骨的寒风。噎，声塞。",
+                    "随渐响环佩，待归魂魄：化用杜甫《咏怀古迹·其三》「画图省识春风面，环佩空归夜月魂」。这里指：远在故国的人们听到了环佩声逐渐响起——这是昭君的魂魄正从塞外归来。",
+                    "顿：忽然。",
+                    "城堞：指城墙上沿的齿状矮墙结构。",
+                    "驿马：古代官方设置的驿站专用的马匹。",
+                    "金柝：别名刁斗，是古代军中使用的金属器具，兼具炊煮与报时功能。其形制为三足一柄，白天用作炊具烧煮食物，夜间敲击作为巡更报时工具。",
+                    "耿耿：原指心中挂怀、烦躁不安之态，这里指边塞之声杂乱而悲戚。",
+                    "迢递：本义形容遥远之貌，这里形容塞外夜色无边无际。",
+                    "漏壶滴缺：漏壶中的水滴仿佛要将壶底滴穿，形容夜的漫长。漏壶，古代计时的器具，用铜制成，分播水壶、受水壶两部。",
+                    "冥迷青冢：冥迷，模糊不清、迷蒙迷茫，常用于描绘自然景物朦胧状态或人物神志恍惚之态。青冢，昭君墓。相传北地草皆白，惟独昭君墓上草青，故名青冢。"
+                ]
+            },
+            {
+                id: 2,
+                title: "瑞龙吟·大石长安",
+                author: "阵午车",
+                createTime: "2024年6月",
+                content: [
+                    "廉纤雨。时洒睡鹭陂塘，浴凫兰浦。葱葱苔湿墙头，寸青不管，侵人旧户。",
+                    "困眠误。还梦汉宫金屋，夕阳如缕。长安望绣成堆，画楼接月，铜仙奉露。",
+                    "长记真妃妆罢，羽霓金雀，相歌同舞。千里紫骝青骢，倾国游处。春宫粉黛，羞见频相妒。人无数、梨园乐满，天街难步。过事空迟暮。玉颜已付，渔阳乱鼓。风飐轻帘举。惊觉晚、西窗垂杨低语。半床旧梦，一怀新絮。"
+                ],
+                interpretation: "读长恨歌有感，遂作《瑞龙吟》以梦记之。以周邦彦《瑞龙吟·大石春景》调为正体，韵脚为词林正韵四部。致力于构建时空交叠的章法。上片以微雨苔痕起笔点明环境，中片通过梦境勾连起现实和历史，以长安盛景铺陈开元天宝的璀璨幻梦，下片聚焦杨贵妃的倾城风华、渔阳鼙鼓的破碎幻灭以及梦醒时分的怅然若失。",
+                notes: [
+                    "廉纤：微小，形容微雨。",
+                    "兰浦：长着兰草的水边。",
+                    "葱葱：茂盛的样子。",
+                    "误：这里指误入梦境。",
+                    "汉宫金屋：本义指华美之屋。汉代班固《汉武故事》中汉武帝刘彻「金屋藏娇」记载，幼年承诺若娶表妹陈阿娇为妻，将建造金屋供其居住。",
+                    "长安望绣成堆：化用杜牧《过华清宫绝句》「长安回望绣成堆，山顶千门次第开」一句。",
+                    "画楼接月：华丽的楼房托住了月亮。画楼，雕饰华丽的楼房。接，托举。",
+                    "铜仙奉露：金铜仙人掌中的承露盘供奉着仙露。铜仙，即金铜仙人，指汉武帝时期铸造的仙人像。",
+                    "真妃：即杨贵妃。因杨贵妃曾为女道士，号太真，故称。",
+                    "羽霓金雀：霓裳羽衣、金雀钗头，这里用来形容杨贵妃装饰华美。",
+                    "千里紫骝青骢：形容杨贵妃出游时，随从的骏马奔驰的阵势。",
+                    "梨园：原是古代对戏曲班子的别称，唐玄宗李隆基在此教演艺人。",
+                    "天街：一般指朱雀大街，是隋唐长安城南北中轴线。",
+                    "渔阳：郡名，安禄山起兵叛乱之地。天宝十四载（755）冬，安禄山在范阳起兵叛乱。",
+                    "飐：因风而颤动或展开。"
+                ]
+            },
+            {
+                id: 3,
+                title: "疏影",
+                author: "阵午车",
+                createTime: "2025年1月",
+                content: [
+                    "暗香未竭。自冻枝一角，淡英奇绝。缟染初妆，粉缀梢头，寒添素骨孤洁。寿阳教把香瘢补，更变做、佩环凄切。恨青春、未与伊期，已伴冰霜俱灭。",
+                    "零落黄昏陌上，剩苔侵岸石，桥积残雪。漠漠娟枝，客里西施，谁共半湖明月？驿边攀折曾相与，向陇上、玉龙吹彻。念而今，梢底芳衰，又有几回分别？"
+                ],
+                interpretation: "咏物词，吟咏梅花之作。以姜夔《疏影·苔枝缀玉》为正体。以寒梅为意象，通过细腻的笔触勾勒出梅花在冰雪中孤傲绽放又渐次凋零的凄美历程。",
+                notes: [
+                    "暗香：指清幽淡雅的香气，尤指梅花散发的芬芳。",
+                    "淡英奇绝：素白的花朵清奇绝伦。奇绝，奇妙到极点，这里指梅花姿态清奇。",
+                    "缟：一种白色的丝织品。",
+                    "寿阳教把香瘢补：化用寿阳公主梅花妆的典故。",
+                    "佩环凄切：化用杜甫《咏怀古迹·其三》「画图省识春风面，环佩空归夜月魂」。",
+                    "青春：原意指草木青翠的春天。这里用作双关义，既指春天，又指美好年华。",
+                    "伊：你。",
+                    "零落黄昏陌上：化用陆游《卜算子·咏梅》「零落成泥碾作尘，只有香如故」。",
+                    "漠漠：原指灰蒙蒙的视觉状态，也形容寂静无声的环境。",
+                    "客里西施：这里把寂寥的梅花比作客居他乡的西施。",
+                    "驿边攀折曾相与：化用南北朝陆凯《赠范晔诗》「折花逢驿使，赠与陇头人」。",
+                    "玉龙吹彻：用玉笛吹奏着《梅花落》的笛曲。玉龙，玉笛。"
+                ]
+            },
+            {
+                id: 4,
+                title: "望海潮·嫦娥",
+                author: "阵午车",
+                createTime: "某年中秋",
+                content: [
+                    "翦波眸子，凝云纤手，绛唇一片冰消。簪股绣鸳，钗梁亸燕，眉山隐约相描。犹捻四弦娇。玉兔身边舞，仙袂纷撩。曲绕蟾宫，琵琶声远下银桥。",
+                    "桥边谁教吹箫？有金风露吐，玉桂香抛。琉瓦溅华，明灯碍月，画楼十里帘招。天远路迢迢！弱步银河渡，夜冷宫遥。欲返人间未了，长梦枕边销。"
+                ],
+                interpretation: "以柳永《望海潮·东南形胜》为正体，借嫦娥神话，以极盛之景托极寂之心。",
+                notes: [
+                    "翦波眸子：化用李贺《唐儿歌》「骨重神寒天庙器，一双瞳人剪秋水」，形容眼睛晶莹闪光。翦，通「剪」。",
+                    "绛唇：红唇。",
+                    "簪股绣鸳：发簪绣着鸳鸯。簪是用来绾定发髻或冠的长针，簪股是簪的代称。",
+                    "钗梁亸燕：钗头垂下双燕。钗梁：钗的主干部分。亸：下垂。",
+                    "眉山：指女子秀丽的眉形，源自《西京杂记》对卓文君的记载。",
+                    "四弦：指琵琶。",
+                    "玉兔：又名月兔，居住在月球上，在月宫里负责捣药。",
+                    "仙袂：指仙人的衣袖。该词最早可追溯至《长恨歌》中「风吹仙袂飘飘举」的经典描写。",
+                    "蟾宫：即广寒宫，中国传统神话中位于月球的宫殿，为嫦娥奔月后所居之处。",
+                    "银桥：传说中仙杖变化而成的大桥。桥可通月宫。",
+                    "桥边谁教吹箫：化用杜牧《寄扬州韩绰判官》「二十四桥明月夜，玉人何处教吹箫」。",
+                    "金风：秋风。",
+                    "玉桂：桂树的美称。",
+                    "琉瓦：琉璃瓦。",
+                    "画楼：雕饰华丽的楼房。",
+                    "弱步：步态轻盈的样子。"
+                ]
+            },
+            {
+                id: 5,
+                title: "石室禅寺观梨花有感",
+                author: "六步斋",
+                createTime: "2025年春",
+                content: [
+                    "棠梨偏于伽蓝开，",
+                    "汇成石莲一道白。",
+                    "若非禅音催灵智，",
+                    "怎得青雪伴雨来。"
+                ]
+            },
+            {
+                id: 6,
+                title: "醉花阴·临安咏夏",
+                author: "六步斋",
+                createTime: "2025年夏",
+                content: [
+                    "碧水新荷钱叶小，柳浪闻雀闹。",
+                    "车水马龙里，夕照雷峰，蝉咽林间道。",
+                    "钱塘往事随风飘，兴废何人料？",
+                    "燕语莺声里，西泠桥畔，寂寞苏小小。"
+                ]
+            },
+            {
+                id: 7,
+                title: "醉花阴·新岁",
+                author: "六步斋",
+                createTime: "2025年春节",
+                content: [
+                    "且唱新词送岁华，椒颂尚吟罢。",
+                    "调雪底黄芽，闲赏物华，观火树银花。",
+                    "玲珑百果银盘卧，风味自堪夸。",
+                    "品赤枣雪耳，尝味人间，甘美自万家。"
+                ]
+            },
+            {
+                id: 8,
+                title: "天净沙·秋思",
+                author: "姝",
+                content: [
+                    "梧桐凉夜笙笳，残苑落枣鸣花，长桌乱页清茶。",
+                    "影斜灯下，婵娟何谓天涯。"
+                ]
+            },
+            {
+                id: 9,
+                title: "越中诸贤咏·其一 越王勾践",
+                author: "金潼",
+                createTime: "2025年10月15日",
+                content: [
+                    "身若昆吾百炼金，三千死士下嵚崟。",
+                    "每于兴国思尝胆，终见复雠由捧心。",
+                    "越鸟弓藏射潮晚，吴宫花落浣溪深。",
+                    "衹今犹惧君恩重，过尽投醪未敢斟。"
+                ]
+            },
+            {
+                id: 10,
+                title: "越中诸贤咏·其二 陆游",
+                author: "金潼",
+                createTime: "2025年10月15日",
+                content: [
+                    "胡尘泪尽望君王，漫学少陵怀谏章。",
+                    "异代剑南曾邂逅，此生渭北各思量。",
+                    "分钗怕问黄縢冷，聚墨空留黛玉香。",
+                    "亘古男儿真绝调，只应梦比饮冰凉。"
+                ]
+            },
+            {
+                id: 11,
+                title: "定风波·把酒花前（其一）",
+                author: "贾一平",
+                createTime: "2025年9月14日",
+                content: [
+                    "把酒西窗树树垂。举杯自放最堪悲。南国不知秋已到。过了。岂容落叶似花飞。",
+                    "一盏曾将春送断。添满。更凭一盏耐春迟。醉入梦乡还可醉。如此。盛秋略比暮春时。"
+                ]
+            },
+            {
+                id: 12,
+                title: "定风波·把酒花前（其二）",
+                author: "贾一平",
+                createTime: "2025年9月14日",
+                content: [
+                    "把酒成眠总未甘。不眠还忆百花潭。留得枯荷听雨处。曾驻。蜻蜓立上小攒尖。",
+                    "往事追寻如点水。何已。波纹镜影本难兼。索性大风萍末起。吹碎。万般都化水挼蓝。"
+                ]
+            },
+            {
+                id: 13,
+                title: "定风波·把酒花前（其三）",
+                author: "贾一平",
+                createTime: "2025年9月14日",
+                content: [
+                    "把酒支颐欲问公。那堪暂挽水流东。追问可怜终自问。何瞬。几多铸就寸心中。",
+                    "瓶小一枝闲料理。伤矣。折前冶艳属芳丛。越是飘零须烂赏。休忘。一枝便不让皆空。"
+                ]
+            },
+            {
+                id: 14,
+                title: "定风波·把酒花前（其四）",
+                author: "贾一平",
+                createTime: "2025年9月14日",
+                content: [
+                    "把酒高楼且放吟。轻云多少算层阴。无尽银流流也尽。谁认。青天碧海奔娥心。",
+                    "淡白渐侵栏外紫。交汇。汇如静水不知深。一派微星淹没了。犹照。寥寥光历去来今。"
+                ]
+            },
+            {
+                id: 15,
+                title: "冬日即事",
+                author: "摘星子",
+                createTime: "12月14日",
+                content: [
+                    "寒风知我意，须自北方来。",
+                    "岭南春未尽，鲁国地已白。",
+                    "纸画承旧训，回忆滋新苔。",
+                    "谁道故人少，千里亦同怀。"
+                ]
+            },
+            {
+                id: 16,
+                title: "归乡",
+                author: "摘星子",
+                createTime: "11月19日",
+                content: [
+                    "辞家千里又千里，目极青山重青山。",
+                    "鹏城不见聊城月，晴空亦当照我还。"
+                ]
+            },
+            {
+                id: 17,
+                title: "秋夜獨懷",
+                author: "Yuqing Du",
+                content: [
+                    "長夜深深月半微，渺難尋故兩依依。",
+                    "殘燈未竟人無語，獨影輕搖葉自飛。",
+                    "往事已隨秋水遠，芳心猶傍舊園扉。",
+                    "露冷香魂終未了，霜落清光盡滿衣。"
+                ]
+            },
+            {
+                id: 18,
+                title: "破陣子·題明故宮遺址",
+                author: "昆仑水龙",
+                content: [
+                    "百十年來家國，千萬里地山河。",
+                    "昔日十朝古都處，文教禮儀皆昌盛，曾立龍鳳閣。",
+                    "一旦紅塵升起，古都亦遭矛戈。",
+                    "最是戡亂未靖日，倉皇難奏離別歌，海峽兩相隔。"
+                ]
+            },
+            {
+                id: 19,
+                title: "七律·抵金陵故都",
+                author: "昆仑水龙",
+                content: [
+                    "錦山煙雨兩茫茫，故都幾時復重光？",
+                    "攻守易勢今勝昔，鼎沸如焚淚兩行。",
+                    "江宁城勢何日興，秣陵亦應再稱王。",
+                    "古今往事付談笑，興衰勝負皆滄桑。"
+                ]
+            },
+            {
+                id: 20,
+                title: "定风波·别黄俊波教授",
+                author: "缃彩成丛",
+                createTime: "2024年12月",
+                content: [
+                    "万里黄云岁月驰，北风一度叹逢迟。日暮送君疑醉梦，肠断，几番离恨有谁知？",
+                    "桃李春风听夜雨，如炬，俊才温玉是吾师。挥手碧波帆影去，唯愿，与君再见雪融时。"
+                ],
+                notes: [
+                    "万里黄云：虚写，营造送别氛围。唐代高适《别董大》：「千里黄云白日曛，北风吹雁雪纷纷。」",
+                    "雪融：虚写，代指春天。"
+                ]
+            },
+            {
+                id: 21,
+                title: "浣溪沙·春日别神女",
+                author: "缃彩成丛",
+                content: [
+                    "一曲阳关把酒听，落花归燕柳娉婷。斜袖罗，美目盼，雪霜凝。",
+                    "旖旎玉妆拂细雨，葳蕤兰叶绽新晴。尽离尊，云叆叇，数峰青。"
+                ],
+                notes: [
+                    "落花归燕：时间是仲春。宋代晏殊《破阵子》词：「燕子来时新社，梨花落后清明。」",
+                    "斜袖罗：抬起手臂，斜举衣袖。唐代李晔《巫山一段云》词。",
+                    "美目盼：《诗经·卫风·硕人》：「巧笑倩兮，美目盼兮。」",
+                    "雪霜凝：「雪霜」似具神性，而唐代韦庄《菩萨蛮》词：「垆边人似月，皓腕凝霜雪。」又具人性。",
+                    "云叆叇，数峰青：指巫山十二峰，源自巫山神女的典故。"
+                ]
+            },
+            {
+                id: 22,
+                title: "忆东坡·春江别绪",
+                author: "缃彩成丛",
+                content: [
+                    "望春江似练，兰舟数峰远。佳人赠我新题卷，不觉重泪眼。不觉重泪眼。",
+                    "旧游忆万遍，可得相见？尔去后、诗情敛。试陈愿与南归燕，盈盈波潋滟。盈盈波潋滟。"
+                ],
+                notes: [
+                    "这是笔者写给诗友陈尔东的赠词。",
+                    "盈盈波潋滟：宋代王观《卜算子·送鲍浩然之浙东》词：「水是眼波横，山是眉峰聚。欲问行人去那边？眉眼盈盈处。才始送春归，又送君归去。若到江南赶上春，千万和春住。」"
+                ]
+            },
+            {
+                id: 23,
+                title: "胜胜令·答友",
+                author: "阵午车",
+                content: [
+                    "离津浪远，别浦云重。落花流水各西东。青衫渍酒，对啼烛，卷愁篷。更几番、寒砦断鸿。",
+                    "忽报归鞍，疑梦里，识眉峰。旧衫犹带滴珠红。银釭照影，笑相逢，语难通。任玉壶、倾尽晓钟。"
+                ]
+            },
+            {
+                id: 24,
+                title: "苏幕遮",
+                author: "小桥风满袖",
+                content: [
+                    "暮云沉，天韵悄。帘影心昏，小字桔灯照。",
+                    "谁教夕霞萦月晓，缭乱星临，流水孤村绕。",
+                    "怨春山，青未了。风漫回廊，不送佳人笑。",
+                    "魂梦茫茫成渺渺，梦尽寒来，一任烟波杳。"
+                ],
+                interpretation: "近来烦事颇多，忧愁满身，适逢向晚，余独坐窗前，观霞落而月升，小灯昏而心绪不宁，故作此词，以解宿愁。"
+            },
+            {
+                id: 25,
+                title: "蝶恋花·记思",
+                author: "小桥风满袖",
+                content: [
+                    "昨夜不眠成乱绪，碎骨小楼，谩起黄莺语。",
+                    "涯角清寒谁与诉，中庭花影随心暮。",
+                    "寻遍红叶风满路，玉沫层林，舞过青山去。",
+                    "却向秋云托尺素，月明千里家何处。"
+                ]
+            },
+            {
+                id: 26,
+                title: "破阵子·二十一",
+                author: "奇",
+                createTime: "2025年12月24日",
+                content: [
+                    "晦望孤烟野树，旦夕商旅行人。",
+                    "毫末掀舞探骊浪，方寸纵横逐鹿尘，何处可栖身。",
+                    "昼短染指清梦，枥少再铨高门。",
+                    "冬风未冷金樽酒，春来谁顾累土声，一去了无痕。"
+                ]
+            },
+            {
+                id: 27,
+                title: "冬至夜书",
+                author: "淋雪烟",
+                content: [
+                    "去年冬至日，晚空寒星流。",
+                    "相约铃音后，片语明如昼。",
+                    "兜转又春秋，霜与沙依旧。",
+                    "渺然一薄酒，夜久浸衣袖。"
+                ]
+            },
+            {
+                id: 28,
+                title: "南乡子·隙语道流光",
+                author: "淋雪烟",
+                content: [
+                    "隙语道流光。几度尘灰共影长。一十二年多少事？苍苍。墨渍残卷梦几行。",
+                    "铃响碎空廊，漫沁书扉页泛黄。此心归去安何处？斜阳。夏夜蝉鸣白月光。"
+                ]
+            },
+            {
+                id: 29,
+                title: "中秋杂咏",
+                author: "淋雪烟",
+                content: [
+                    "圆蟾出九重，清光泻梧桐。",
+                    "双亲倚杖望云空。",
+                    "忽忆少年曾捕流萤，鬓边今已秋意浓。",
+                    "华灯耀朱栊，桂子落晚风。",
+                    "稚子擎盘过花丛。",
+                    "笑指玉兔躲入冰轮，银辉跳进酒盏中。",
+                    "佳肴列玉盘，羹汤泛乳泓。",
+                    "阿姊举箸说旧容。",
+                    "那年菱角剥落指缝，月光浸透青石垄。",
+                    "阖家聚堂中，欢语震帘栊。",
+                    "快门声定影朦胧。",
+                    "檐角旧燕识得团圆，穿梁又画半轮弓。",
+                    "今宵月正满，情寄山海盟。",
+                    "长风送我意千重。",
+                    "愿得年年此夜，清辉共照归鸿踪。"
+                ]
+            },
+            {
+                id: 30,
+                title: "水调歌头·AI世感怀",
+                author: "奇",
+                content: [
+                    "万壑奔涛急，斗室独深吟。",
+                    "蓬莱莫过如许，弹指化神奇。",
+                    "画角残更寒彻，陈迹烟埋万里，霜夜意难禁。",
+                    "兴废空回首，凉笛满遥林。",
+                    "兹刹那，彼须臾，怎堪瞑。",
+                    "快睹关河故垒，万象焕新晴。",
+                    "休叹平生蹉跎，莫计桑榆得失，高卧自起行。",
+                    "此身安然法，犹赋小诗心。"
+                ]
+            }
+        ];
+
+        // ==========================================
+        // 🎮 页面控制逻辑
+        // ==========================================
+        let currentPage = 0; // 0 = 封面, 1 = 序言, 2+ = 诗词页面
+        const totalPages = poems.length + 2; // 封面 + 序言 + 诗词数量
+
+        // 初始化页面
+        function initPages() {
+            const container = document.getElementById('pagesContainer');
+            container.innerHTML = '';
+
+            // 创建封面页
+            const coverSpread = createCoverSpread();
+            container.appendChild(coverSpread);
+
+            // 创建序言页
+            const prefaceSpread = createPrefaceSpread();
+            container.appendChild(prefaceSpread);
+
+            // 创建诗词页面
+            poems.forEach((poem, index) => {
+                const poemSpread = createPoemSpread(poem, index);
+                container.appendChild(poemSpread);
+            });
+
+            // 初始化分页点
+            initPageDots();
+
+            // 初始化目录
+            initToc();
+
+            // 更新显示
+            updatePageDisplay();
+        }
+
+        // 创建封面页
+        function createCoverSpread() {
+            const spread = document.createElement('div');
+            spread.className = 'page-spread active';
+            spread.innerHTML = `
+                <div class="page page-left cover-page">
+                    <div class="cover-decoration" style="background-image: url('https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=800');"></div>
+                    <div class="cover-title-vertical">
+                        <h1 class="cover-main-title">掬月诗集</h1>
+                        <div class="cover-subtitle">第一卷 · 2025</div>
+                    </div>
+                    <div class="cover-seal">
+                        <span>掬</span>
+                        <span>月</span>
+                        <span>诗</span>
+                        <span>社</span>
+                    </div>
+                </div>
+                <div class="page page-right toc-page">
+                    <h2 class="toc-title">
+                        <span class="icon">☰</span>
+                        目 录
+                    </h2>
+                    <div class="toc-list">
+                        <div class="toc-item" onclick="goToPage(1)">
+                            <span class="toc-number">序</span>
+                            <span class="toc-poem-title">序 言</span>
+                            <span class="toc-author">杜万奇</span>
+                        </div>
+                        ${poems.map((poem, i) => `
+                            <div class="toc-item" onclick="goToPage(${i + 2})">
+                                <span class="toc-number">${String(i + 1).padStart(2, '0')}</span>
+                                <span class="toc-poem-title">${poem.title}</span>
+                                <span class="toc-author">${poem.author}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            return spread;
+        }
+
+        // 创建序言页
+        function createPrefaceSpread() {
+            const spread = document.createElement('div');
+            spread.className = 'page-spread';
+            spread.innerHTML = `
+                <div class="page page-left poem-page">
+                    <div class="poem-content-area">
+                        <div class="poem-vertical-content">
+                            <div class="poem-title-block">
+                                <h2 class="poem-title">序 言</h2>
+                            </div>
+                            <div class="poem-lines" style="text-align: left; max-width: 90%;">
+                                <p class="poem-line" style="text-align: left; line-height: 2;">岁聿其莫，年关将近。港中深掬月诗社邀诸同窗，汇一载古诗文作，辑成《掬月集》一册，以藏岁月清欢，念同窗相知。</p>
+                                <p class="poem-line" style="text-align: left; line-height: 2; margin-top: 1.5rem;">诗文本无高低，唯有真情动人。集中诸篇，皆为诸君平日读书有感、观物生情，或闲时偶得、知己闲谈，不拘格律，不逐绮丽，字字皆赤诚。</p>
+                                <p class="poem-line" style="text-align: left; line-height: 2; margin-top: 1.5rem;">我社以"掬月"为名，愿掬岁月于诗词，藏心事于平仄。此集所录，无关工拙，皆为诸君一岁心声，亦是你我以诗为契、以文相和的情谊写照。</p>
+                                <p class="poem-line" style="text-align: left; line-height: 2; margin-top: 1.5rem;">今集册已成，展卷可览山河草木、心事微光。愿诗心不老，清韵长存；诸友相知，岁岁皆安。</p>
+                                <div style="margin-top: 3rem; text-align: right; padding-right: 2rem;">
+                                    <p style="font-size: 1.125rem; color: var(--ink); font-weight: 600; margin-bottom: 0.5rem;">掬月社社长</p>
+                                    <p style="font-size: 1.5rem; color: var(--seal-red); font-weight: 900; letter-spacing: 0.2em;">杜万奇</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="page-number page-number-left">
+                        <span>02</span>
+                    </div>
+                </div>
+                <div class="page page-right annotation-page">
+                    <div class="annotation-content">
+                        <div style="text-align: center; padding: 3rem; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+                            <div style="width: 120px; height: 120px; border: 3px solid var(--seal-red); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--seal-red); font-weight: 700; background: rgba(185, 58, 50, 0.05); margin-bottom: 2rem;">
+                                <span>掬</span>
+                                <span>月</span>
+                            </div>
+                            <p style="font-size: 1.25rem; color: var(--ink-light); letter-spacing: 0.2em;">掬月诗社</p>
+                        </div>
+                    </div>
+                    <div class="page-number page-number-right">
+                        <span>03</span>
+                    </div>
+                </div>
+            `;
+            return spread;
+        }
+
+        // 创建诗词页面
+        function createPoemSpread(poem, index) {
+            const spread = document.createElement('div');
+            spread.className = 'page-spread';
+            spread.innerHTML = `
+                <div class="page page-left poem-page">
+                    <div class="poem-content-area">
+                        <div class="poem-vertical-content">
+                            <div class="poem-title-block">
+                                <h2 class="poem-title">${poem.title}</h2>
+                                <span class="poem-author">${poem.author}</span>
+                                ${poem.createTime ? `<span class="poem-time">${poem.createTime}</span>` : ''}
+                            </div>
+                            <div class="poem-lines">
+                                ${poem.content.map(line => `<p class="poem-line">${line}</p>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="page-number page-number-left">
+                        <span>${String((index + 2) * 2).padStart(2, '0')}</span>
+                    </div>
+                </div>
+                <div class="page page-right annotation-page">
+                    ${poem.bgImage ? `<div class="annotation-bg-image" style="background-image: url('${poem.bgImage}');"></div>` : ''}
+                    <div class="annotation-content">
+                        <div class="annotation-card">
+                            <div class="annotation-card-header">
+                                <h3 class="annotation-card-title">
+                                    作者心语
+                                </h3>
+                                <div class="annotation-card-actions">
+                                    <button title="深入探索" class="explore-icon-btn" onclick="openAnnotationModal(${index})">深入探索</button>
+                                </div>
+                            </div>
+                            ${poem.interpretation ? `<p class="annotation-text">${poem.interpretation}</p>` : ''}
+                            ${poem.notes && poem.notes.length > 0 ? `
+                            <div class="annotation-section">
+                                <h4 class="annotation-section-title">词句注释</h4>
+                                <div class="annotation-notes">
+                                    ${poem.notes.slice(0, 3).map(note => `<div class="annotation-note-item">${note}</div>`).join('')}
+                                    ${poem.notes.length > 3 ? `<div class="annotation-note-more">...共${poem.notes.length}条注释，点击下方查看全部</div>` : ''}
+                                </div>
+                            </div>` : ''}
+                            <div class="annotation-footer">
+                                <span class="annotation-footer-link">掬月诗社</span>
+                                <div class="annotation-explore-btn" onclick="openAnnotationModal(${index + 1})">
+                                    <span>深入探索</span>
+                                    <span class="icon">→</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="page-number page-number-right">
+                        <span>${String((index + 2) * 2 + 1).padStart(2, '0')}</span>
+                    </div>
+                </div>
+            `;
+            return spread;
+        }
+
+        // 初始化分页点
+        function initPageDots() {
+            const dotsContainer = document.getElementById('pageDots');
+            dotsContainer.innerHTML = '';
+            
+            // 只显示最多7个点
+            const maxDots = Math.min(totalPages, 7);
+            for (let i = 0; i < maxDots; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'page-dot';
+                dot.onclick = () => goToPage(i);
+                dotsContainer.appendChild(dot);
+            }
+        }
+
+        // 初始化目录
+        function initToc() {
+            const tocList = document.getElementById('tocList');
+            tocList.innerHTML = `
+                <div class="toc-drawer-item ${currentPage === 0 ? 'active' : ''}" onclick="goToPage(0); toggleToc();">
+                    <div class="toc-drawer-number">封</div>
+                    <div class="toc-drawer-info">
+                        <div class="toc-drawer-poem-title">封面 & 目录</div>
+                        <div class="toc-drawer-author">掬月诗集</div>
+                    </div>
+                </div>
+                <div class="toc-drawer-item ${currentPage === 1 ? 'active' : ''}" onclick="goToPage(1); toggleToc();">
+                    <div class="toc-drawer-number">序</div>
+                    <div class="toc-drawer-info">
+                        <div class="toc-drawer-poem-title">序 言</div>
+                        <div class="toc-drawer-author">杜万奇</div>
+                    </div>
+                </div>
+                ${poems.map((poem, i) => `
+                    <div class="toc-drawer-item ${currentPage === i + 2 ? 'active' : ''}" onclick="goToPage(${i + 2}); toggleToc();">
+                        <div class="toc-drawer-number">${String(i + 1).padStart(2, '0')}</div>
+                        <div class="toc-drawer-info">
+                            <div class="toc-drawer-poem-title">${poem.title}</div>
+                            <div class="toc-drawer-author">${poem.author}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        // 更新页面显示
+        function updatePageDisplay() {
+            const spreads = document.querySelectorAll('.page-spread');
+            spreads.forEach((spread, index) => {
+                spread.classList.remove('active', 'flipped');
+                if (index === currentPage) {
+                    spread.classList.add('active');
+                } else if (index < currentPage) {
+                    spread.classList.add('flipped');
+                }
+                // 当前页面 z-index 最高，其他页面根据距离当前页面的位置递减
+                spread.style.zIndex = index === currentPage ? 100 : (index < currentPage ? index : totalPages - index);
+            });
+
+            // 更新标题
+            const titleEl = document.getElementById('pageTitle');
+            if (currentPage === 0) {
+                titleEl.textContent = '掬月诗集';
+            } else if (currentPage === 1) {
+                titleEl.textContent = '序 言';
+            } else {
+                titleEl.textContent = poems[currentPage - 2].title;
+            }
+
+            // 更新分页点
+            const dots = document.querySelectorAll('.page-dot');
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentPage);
+            });
+
+            // 更新按钮状态
+            document.getElementById('prevBtn').disabled = currentPage === 0;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages - 1;
+
+            // 更新目录高亮
+            const tocItems = document.querySelectorAll('.toc-drawer-item');
+            tocItems.forEach((item, index) => {
+                item.classList.toggle('active', index === currentPage);
+            });
+        }
+
+        // 翻到下一页
+        function nextPage() {
+            if (currentPage < totalPages - 1) {
+                currentPage++;
+                updatePageDisplay();
+            }
+        }
+
+        // 翻到上一页
+        function prevPage() {
+            if (currentPage > 0) {
+                currentPage--;
+                updatePageDisplay();
+            }
+        }
+
+        // 跳转到指定页
+        function goToPage(pageIndex) {
+            if (pageIndex >= 0 && pageIndex < totalPages) {
+                currentPage = pageIndex;
+                updatePageDisplay();
+            }
+        }
+
+        // 切换目录
+        function toggleToc() {
+            const drawer = document.getElementById('tocDrawer');
+            const overlay = document.getElementById('tocOverlay');
+            drawer.classList.toggle('open');
+            overlay.classList.toggle('open');
+        }
+
+        // 打开注释面板
+        function openAnnotationModal(poemIndex) {
+            const poem = poems[poemIndex];
+            if (!poem) return;
+
+            const modal = document.getElementById('annotationModal');
+            const overlay = document.getElementById('annotationOverlay');
+            const titleEl = document.getElementById('modalPoemTitle');
+            const bodyEl = document.getElementById('annotationModalBody');
+
+            titleEl.textContent = poem.title + ' - 详解';
+
+            bodyEl.innerHTML = `
+                <div class="annotation-modal-poem-info">
+                    <span class="annotation-modal-poem-title">${poem.title}</span>
+                    <span class="annotation-modal-poem-author">${poem.author}</span>
+                    ${poem.createTime ? `<span class="annotation-modal-poem-time">${poem.createTime}</span>` : ''}
+                </div>
+                
+                <div class="annotation-modal-section">
+                    <h3 class="annotation-modal-section-title">原文</h3>
+                    <div class="annotation-modal-text" style="text-align: center; font-size: 1.125rem; letter-spacing: 0.1em;">
+                        ${poem.content.map(line => `<p style="margin-bottom: 0.5rem;">${line}</p>`).join('')}
+                    </div>
+                </div>
+                
+                ${poem.interpretation ? `
+                <div class="annotation-modal-section">
+                    <h3 class="annotation-modal-section-title">作者心语</h3>
+                    <p class="annotation-modal-text">${poem.interpretation}</p>
+                </div>
+                ` : ''}
+                
+                ${poem.notes && poem.notes.length > 0 ? `
+                <div class="annotation-modal-section">
+                    <h3 class="annotation-modal-section-title">词句注释</h3>
+                    <div class="annotation-modal-notes">
+                        ${poem.notes.map(note => `<div class="annotation-modal-note-item">${note}</div>`).join('')}
+                    </div>
+                </div>
+                ` : ''}
+            `;
+
+            modal.classList.add('open');
+            overlay.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 关闭注释面板
+        function closeAnnotationModal() {
+            const modal = document.getElementById('annotationModal');
+            const overlay = document.getElementById('annotationOverlay');
+            modal.classList.remove('open');
+            overlay.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        // 键盘导航
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                nextPage();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                prevPage();
+            } else if (e.key === 'Escape') {
+                const drawer = document.getElementById('tocDrawer');
+                const modal = document.getElementById('annotationModal');
+                if (modal.classList.contains('open')) {
+                    closeAnnotationModal();
+                } else if (drawer.classList.contains('open')) {
+                    toggleToc();
+                }
+            }
+        });
+
+        // 触摸滑动支持
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+
+        document.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        });
+
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            const diff = touchStartX - touchEndX;
+            
+            if (Math.abs(diff) > swipeThreshold) {
+                if (diff > 0) {
+                    nextPage(); // 左滑翻下一页
+                } else {
+                    prevPage(); // 右滑翻上一页
+                }
+            }
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', initPages);
+    </script>
+</body>
+</html>
